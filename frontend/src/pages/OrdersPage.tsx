@@ -161,7 +161,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onUpdate }) => {
           </button>
         )}
         
-        {(order.status === 'assigned' || order.status === 'in_progress') && order.adlFiles && order.adlFiles.length > 0 && (
+        {(order.status === 'assigned' || order.status === 'in_progress') && (
           <button
             onClick={handleCompleteOrder}
             className="inline-flex items-center gap-2 px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700"

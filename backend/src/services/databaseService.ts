@@ -196,7 +196,25 @@ class DatabaseService {
     
     try {
       const result = await client.query('SELECT * FROM orders WHERE id = $1', [id]);
-      return result.rows[0] || null;
+      const order = result.rows[0];
+      
+      if (!order) {
+        return null;
+      }
+      
+      // Fetch ADL attachments for this order
+      const adlAttachments = await this.getADLAttachments(order.id);
+      order.adl_files = adlAttachments.map(attachment => ({
+        id: attachment.id,
+        order_id: attachment.order_id,
+        file_name: attachment.file_path.split('/').pop(),
+        file_type: attachment.file_type,
+        file_size: 0, // We don't store file size currently
+        file_path: attachment.file_path,
+        uploaded_at: attachment.created_at
+      }));
+      
+      return order;
     } finally {
       client.release();
     }
@@ -207,7 +225,23 @@ class DatabaseService {
     
     try {
       const result = await client.query('SELECT * FROM orders ORDER BY created_at DESC');
-      return result.rows;
+      const orders = result.rows;
+      
+      // Fetch ADL attachments for each order
+      for (const order of orders) {
+        const adlAttachments = await this.getADLAttachments(order.id);
+        order.adl_files = adlAttachments.map(attachment => ({
+          id: attachment.id,
+          order_id: attachment.order_id,
+          file_name: attachment.file_path.split('/').pop(),
+          file_type: attachment.file_type,
+          file_size: 0, // We don't store file size currently
+          file_path: attachment.file_path,
+          uploaded_at: attachment.created_at
+        }));
+      }
+      
+      return orders;
     } finally {
       client.release();
     }
