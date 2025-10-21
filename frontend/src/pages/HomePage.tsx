@@ -4,7 +4,7 @@ import { Package, Users, Plus, TrendingUp } from 'lucide-react'
 
 const HomePage: React.FC = () => {
   return (
-    <div className="space-y-6">
+    <div className="w-full space-y-6">
       {/* Header */}
       <div className="bg-white overflow-hidden shadow rounded-lg">
         <div className="px-4 py-5 sm:p-6">
