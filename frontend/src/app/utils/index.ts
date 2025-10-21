@@ -1,43 +1,40 @@
-import { ALLOWED_FILE_TYPES, MAX_FILE_SIZE } from '@constants';
+// Utility functions for the application
 
-export const formatDate = (dateString: string): string => {
-  return new Date(dateString).toLocaleString();
-};
+export const cn = (...classes: (string | undefined | null | false)[]): string => {
+  return classes.filter(Boolean).join(' ')
+}
 
-export const formatCoordinates = (lat: number, lng: number, precision: number = 6): string => {
-  return `${lat.toFixed(precision)}, ${lng.toFixed(precision)}`;
-};
+export const formatDate = (date: string | Date): string => {
+  return new Date(date).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+export const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return '0 Bytes'
+  
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
 
 export const getStatusColor = (status: string): string => {
   switch (status) {
-    case 'pending': return '#f59e0b';
-    case 'assigned': return '#3b82f6';
-    case 'in_progress': return '#8b5cf6';
-    case 'completed': return '#10b981';
-    default: return '#6b7280';
+    case 'pending':
+      return 'text-yellow-600 bg-yellow-100'
+    case 'assigned':
+      return 'text-blue-600 bg-blue-100'
+    case 'in_progress':
+      return 'text-purple-600 bg-purple-100'
+    case 'completed':
+      return 'text-green-600 bg-green-100'
+    default:
+      return 'text-gray-600 bg-gray-100'
   }
-};
-
-export const validateFileType = (file: File): boolean => {
-  return ALLOWED_FILE_TYPES.includes(file.type);
-};
-
-export const validateFileSize = (file: File): boolean => {
-  return file.size <= MAX_FILE_SIZE;
-};
-
-export const formatFileSize = (bytes: number): string => {
-  if (bytes === 0) return '0 Bytes';
-  
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-};
-
-export const getFileTypeIcon = (fileType: string): string => {
-  if (fileType.startsWith('image/')) return '🖼️';
-  if (fileType.startsWith('video/')) return '🎥';
-  return '📄';
-};
+}

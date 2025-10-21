@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { BACKEND_BASE_URL, API_ENDPOINTS } from '@constants';
+import { BACKEND_BASE_URL, API_ENDPOINTS } from '@/app/constants/config';
 import type { 
   Order, 
   Master, 
@@ -9,7 +9,7 @@ import type {
   OrdersResponse,
   MastersResponse,
   MasterResponse
-} from '@types';
+} from '@/types';
 
 // Create axios instance with default config
 const apiClient = axios.create({
