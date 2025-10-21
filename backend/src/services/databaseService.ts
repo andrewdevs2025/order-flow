@@ -242,6 +242,54 @@ class DatabaseService {
     }
   }
 
+  async findAndAssignBestMaster(orderId: string, maxDistance: number = 50): Promise<Master | null> {
+    const client = await this.pool.connect();
+    
+    try {
+      // Get order coordinates
+      const orderResult = await client.query(
+        'SELECT latitude, longitude FROM orders WHERE id = $1', 
+        [orderId]
+      );
+      
+      if (orderResult.rows.length === 0) {
+        throw new Error('Order not found');
+      }
+      
+      const order = orderResult.rows[0];
+      
+      // Get all available masters
+      const mastersResult = await client.query(
+        'SELECT * FROM masters WHERE active_orders < 10 ORDER BY rating DESC, active_orders ASC'
+      );
+      
+      if (mastersResult.rows.length === 0) {
+        return null;
+      }
+      
+      // Import haversine service
+      const { findBestMaster } = await import('./haversineService.js');
+      
+      // Find best master
+      const bestMaster = findBestMaster(
+        mastersResult.rows, 
+        order.latitude, 
+        order.longitude, 
+        maxDistance
+      );
+      
+      if (bestMaster) {
+        // Assign the master
+        await this.assignMaster(orderId, bestMaster.id);
+        return bestMaster;
+      }
+      
+      return null;
+    } finally {
+      client.release();
+    }
+  }
+
   async getAllMasters(): Promise<Master[]> {
     const client = await this.pool.connect();
     
@@ -303,6 +351,16 @@ class DatabaseService {
     
     try {
       await client.query('BEGIN');
+      
+      // Check if order has ADL attachments before completion
+      const adlResult = await client.query(
+        'SELECT COUNT(*) as count FROM adl_attachments WHERE order_id = $1', 
+        [orderId]
+      );
+      
+      if (parseInt(adlResult.rows[0].count) === 0) {
+        throw new Error('Order cannot be completed without ADL attachments');
+      }
       
       // Get the order to find the master
       const orderResult = await client.query('SELECT master_id FROM orders WHERE id = $1', [orderId]);

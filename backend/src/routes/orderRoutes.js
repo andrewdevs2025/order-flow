@@ -1,7 +1,33 @@
 import express from 'express';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 import { databaseService } from '../services/databaseService.js';
+import { extractGPSMetadata, validateFile } from '../services/gpsService.js';
 
 export const router = express.Router();
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = 'uploads/adl';
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ 
+  storage: storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  }
+});
 
 // Get all orders
 router.get('/orders', async (req, res) => {
@@ -89,23 +115,24 @@ router.post('/orders', async (req, res) => {
   }
 });
 
-// Assign master to order
+// Assign master to order (automatic)
 router.post('/orders/:id/assign', async (req, res) => {
   try {
     const { id } = req.params;
-    const { master_id } = req.body;
+    const { maxDistance = 50 } = req.body;
     
-    if (!master_id) {
-      return res.status(400).json({
+    const bestMaster = await databaseService.findAndAssignBestMaster(id, maxDistance);
+    
+    if (!bestMaster) {
+      return res.status(404).json({
         success: false,
-        error: 'master_id is required'
+        error: 'No suitable master found within the specified distance'
       });
     }
     
-    await databaseService.assignMaster(id, master_id);
-    
     res.json({
       success: true,
+      data: bestMaster,
       message: 'Master assigned successfully'
     });
   } catch (error) {
@@ -113,6 +140,86 @@ router.post('/orders/:id/assign', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to assign master',
+      message: error.message
+    });
+  }
+});
+
+// Upload ADL (photo/video with GPS)
+router.post('/orders/:id/adl', upload.single('file'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: 'No file uploaded'
+      });
+    }
+    
+    // Validate file
+    validateFile(req.file);
+    
+    // Extract GPS metadata
+    const fileBuffer = fs.readFileSync(req.file.path);
+    const gpsData = await extractGPSMetadata(fileBuffer, req.file.mimetype);
+    
+    // Determine file type
+    const fileType = req.file.mimetype.startsWith('image/') ? 'photo' : 'video';
+    
+    // Save ADL attachment to database
+    const attachmentData = {
+      order_id: id,
+      file_path: req.file.path,
+      file_type: fileType,
+      latitude: gpsData.latitude,
+      longitude: gpsData.longitude,
+      timestamp: gpsData.timestamp
+    };
+    
+    const attachmentId = await databaseService.addADLAttachment(attachmentData);
+    
+    res.json({
+      success: true,
+      data: {
+        id: attachmentId,
+        fileType: fileType,
+        gpsData: gpsData
+      },
+      message: 'ADL uploaded successfully'
+    });
+  } catch (error) {
+    console.error('Error uploading ADL:', error);
+    
+    // Clean up uploaded file on error
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+    
+    res.status(500).json({
+      success: false,
+      error: 'Failed to upload ADL',
+      message: error.message
+    });
+  }
+});
+
+// Complete order
+router.post('/orders/:id/complete', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    await databaseService.completeOrder(id);
+    
+    res.json({
+      success: true,
+      message: 'Order completed successfully'
+    });
+  } catch (error) {
+    console.error('Error completing order:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to complete order',
       message: error.message
     });
   }

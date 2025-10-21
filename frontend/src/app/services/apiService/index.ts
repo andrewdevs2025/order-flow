@@ -4,7 +4,6 @@ import type {
   Order, 
   Master, 
   CreateOrderRequest, 
-  AssignMasterRequest,
   OrderResponse,
   OrdersResponse,
   MastersResponse,
@@ -91,26 +90,85 @@ export const apiService = {
   },
 };
 
+// Transform backend snake_case to frontend camelCase
+function transformOrderFromBackend(backendOrder: any): Order {
+  return {
+    id: backendOrder.id,
+    customerName: backendOrder.customer_name,
+    customerPhone: backendOrder.customer_phone,
+    address: backendOrder.address,
+    coordinates: {
+      lat: backendOrder.latitude,
+      lng: backendOrder.longitude
+    },
+    description: backendOrder.description,
+    status: backendOrder.status,
+    assignedMasterId: backendOrder.master_id,
+    assignedMaster: backendOrder.assigned_master ? transformMasterFromBackend(backendOrder.assigned_master) : undefined,
+    adlFiles: backendOrder.adl_files || [],
+    createdAt: backendOrder.created_at,
+    updatedAt: backendOrder.updated_at || backendOrder.created_at
+  };
+}
+
+// Transform backend master to frontend format
+function transformMasterFromBackend(backendMaster: any): Master {
+  return {
+    id: backendMaster.id,
+    name: backendMaster.name,
+    phone: backendMaster.phone,
+    email: backendMaster.email || '', // Default empty string if not provided
+    specialties: backendMaster.specialties || [], // Default empty array if not provided
+    rating: typeof backendMaster.rating === 'number' ? backendMaster.rating : parseFloat(backendMaster.rating) || 0,
+    isAvailable: (backendMaster.active_orders || 0) < 10, // Assume max 10 orders if not specified
+    currentOrdersCount: backendMaster.active_orders || 0,
+    maxOrdersCount: 10, // Default max orders
+    location: {
+      lat: typeof backendMaster.latitude === 'number' ? backendMaster.latitude : parseFloat(backendMaster.latitude) || 0,
+      lng: typeof backendMaster.longitude === 'number' ? backendMaster.longitude : parseFloat(backendMaster.longitude) || 0
+    },
+    createdAt: backendMaster.created_at,
+    updatedAt: backendMaster.updated_at || backendMaster.created_at
+  };
+}
+
 // Order API methods
 export const orderService = {
   // Create a new order
   createOrder: (orderData: CreateOrderRequest): Promise<OrderResponse> => {
-    return apiService.post<OrderResponse>(API_ENDPOINTS.ORDERS, orderData);
+    // Transform camelCase to snake_case for backend
+    const backendData = {
+      customer_name: orderData.customerName,
+      customer_phone: orderData.customerPhone,
+      address: orderData.address,
+      latitude: orderData.coordinates.lat,
+      longitude: orderData.coordinates.lng,
+      description: orderData.description
+    };
+    return apiService.post<OrderResponse>(API_ENDPOINTS.ORDERS, backendData);
   },
 
   // Get all orders
   getAllOrders: (): Promise<OrdersResponse> => {
-    return apiService.get<OrdersResponse>(API_ENDPOINTS.ORDERS);
+    return apiService.get<any>(API_ENDPOINTS.ORDERS).then(response => ({
+      success: response.success,
+      data: response.data.map(transformOrderFromBackend),
+      message: response.message
+    }));
   },
 
   // Get order by ID
   getOrder: (id: string): Promise<OrderResponse> => {
-    return apiService.get<OrderResponse>(`${API_ENDPOINTS.ORDERS}/${id}`);
+    return apiService.get<any>(`${API_ENDPOINTS.ORDERS}/${id}`).then(response => ({
+      success: response.success,
+      data: transformOrderFromBackend(response.data),
+      message: response.message
+    }));
   },
 
-  // Assign master to order
-  assignMaster: (id: string, assignmentData: AssignMasterRequest): Promise<OrderResponse> => {
-    return apiService.post<OrderResponse>(`${API_ENDPOINTS.ORDERS}/${id}/assign`, assignmentData);
+  // Assign master to order (automatic)
+  assignMaster: (id: string, maxDistance?: number): Promise<OrderResponse> => {
+    return apiService.post<OrderResponse>(`${API_ENDPOINTS.ORDERS}/${id}/assign`, { maxDistance });
   },
 
   // Upload ADL
@@ -130,12 +188,20 @@ export const orderService = {
 export const masterService = {
   // Get all masters
   getAllMasters: (): Promise<MastersResponse> => {
-    return apiService.get<MastersResponse>(API_ENDPOINTS.MASTERS);
+    return apiService.get<any>(API_ENDPOINTS.MASTERS).then(response => ({
+      success: response.success,
+      data: response.data.map(transformMasterFromBackend),
+      message: response.message
+    }));
   },
 
   // Get master by ID
   getMaster: (id: string): Promise<MasterResponse> => {
-    return apiService.get<MasterResponse>(`${API_ENDPOINTS.MASTERS}/${id}`);
+    return apiService.get<any>(`${API_ENDPOINTS.MASTERS}/${id}`).then(response => ({
+      success: response.success,
+      data: transformMasterFromBackend(response.data),
+      message: response.message
+    }));
   },
 };
 

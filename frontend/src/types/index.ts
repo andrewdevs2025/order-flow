@@ -30,10 +30,6 @@ export interface CreateOrderRequest {
   description: string;
 }
 
-export interface AssignMasterRequest {
-  masterId: string;
-}
-
 export interface OrderResponse {
   success: boolean;
   data: Order;
