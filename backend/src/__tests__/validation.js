@@ -51,7 +51,7 @@ export function validateOrder(order) {
 
   return {
     isValid: errors.length === 0,
-    errors,
+    errors
   };
 }
 
@@ -86,7 +86,7 @@ export function validateMaster(master) {
 
   return {
     isValid: errors.length === 0,
-    errors,
+    errors
   };
 }
 

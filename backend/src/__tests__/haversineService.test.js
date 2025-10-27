@@ -1,7 +1,7 @@
 import { calculateDistance, findBestMaster, toRadians } from '../services/haversineService.js';
 
 describe('Haversine Service', () => {
-  
+
   describe('toRadians', () => {
     it('should convert degrees to radians', () => {
       expect(toRadians(180)).toBeCloseTo(Math.PI, 5);
@@ -65,7 +65,7 @@ describe('Haversine Service', () => {
       { id: '1', name: 'Near Master', latitude: 40.7128, longitude: -74.0060, rating: 4.5, active_orders: 2 },
       { id: '2', name: 'Far Master', latitude: 40.7500, longitude: -74.0500, rating: 4.8, active_orders: 1 },
       { id: '3', name: 'Excellent Master', latitude: 40.7150, longitude: -74.0100, rating: 5.0, active_orders: 0 },
-      { id: '4', name: 'Too Far Master', latitude: 41.0000, longitude: -74.5000, rating: 4.9, active_orders: 0 },
+      { id: '4', name: 'Too Far Master', latitude: 41.0000, longitude: -74.5000, rating: 4.9, active_orders: 0 }
     ];
 
     it('should return best master within distance', () => {
@@ -104,7 +104,7 @@ describe('Haversine Service', () => {
     it('should prioritize closer masters over higher rated but far ones', () => {
       const localMasters = [
         { id: '1', latitude: 40.7128, longitude: -74.0060, rating: 4.0, active_orders: 5 },
-        { id: '2', latitude: 40.7500, longitude: -74.0500, rating: 5.0, active_orders: 0 },
+        { id: '2', latitude: 40.7500, longitude: -74.0500, rating: 5.0, active_orders: 0 }
       ];
 
       const orderLat = 40.7128;
@@ -120,7 +120,7 @@ describe('Haversine Service', () => {
 
     it('should handle masters with maximum active orders', () => {
       const busyMasters = [
-        { id: '1', latitude: 40.7128, longitude: -74.0060, rating: 4.0, active_orders: 10 },
+        { id: '1', latitude: 40.7128, longitude: -74.0060, rating: 4.0, active_orders: 10 }
       ];
 
       const result = findBestMaster(busyMasters, 40.7128, -74.0060, 50);
@@ -131,11 +131,11 @@ describe('Haversine Service', () => {
 
     it('should calculate composite score correctly', () => {
       const simpleMasters = [
-        { id: '1', latitude: 40.7128, longitude: -74.0060, rating: 4.5, active_orders: 0 },
+        { id: '1', latitude: 40.7128, longitude: -74.0060, rating: 4.5, active_orders: 0 }
       ];
 
       const result = findBestMaster(simpleMasters, 40.7128, -74.0060, 50);
-      
+
       expect(result).not.toBeNull();
       expect(result).toHaveProperty('score');
       expect(result.score).toBeGreaterThan(0);

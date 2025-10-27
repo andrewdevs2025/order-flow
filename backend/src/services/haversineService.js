@@ -15,15 +15,15 @@ export function calculateDistance(lat1, lon1, lat2, lon2) {
   const R = 6371; // Earth's radius in kilometers
   const dLat = toRadians(lat2 - lat1);
   const dLon = toRadians(lon2 - lon1);
-  
-  const a = 
+
+  const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
     Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  
+
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   const distance = R * c;
-  
+
   return distance;
 }
 
@@ -53,10 +53,10 @@ export function findBestMaster(masters, orderLat, orderLon, maxDistance = 50) {
   const eligibleMasters = masters
     .map(master => {
       const distance = calculateDistance(
-        orderLat, orderLon, 
+        orderLat, orderLon,
         master.latitude, master.longitude
       );
-      
+
       // Skip if too far
       if (distance > maxDistance) {
         return null;
@@ -67,9 +67,9 @@ export function findBestMaster(masters, orderLat, orderLon, maxDistance = 50) {
       const distanceScore = Math.max(0, (maxDistance - distance) / maxDistance) * 0.7;
       const ratingScore = (master.rating / 5) * 0.2; // Normalize rating to 0-1
       const loadScore = Math.max(0, (10 - master.active_orders) / 10) * 0.1; // Assume max 10 orders
-      
+
       const totalScore = distanceScore + ratingScore + loadScore;
-      
+
       return {
         ...master,
         distance,

@@ -22,7 +22,7 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ 
+const upload = multer({
   storage: storage,
   limits: {
     fileSize: 10 * 1024 * 1024 // 10MB limit
@@ -53,14 +53,14 @@ router.get('/orders/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const order = await databaseService.getOrder(id);
-    
+
     if (!order) {
       return res.status(404).json({
         success: false,
         error: 'Order not found'
       });
     }
-    
+
     res.json({
       success: true,
       data: order
@@ -79,7 +79,7 @@ router.get('/orders/:id', async (req, res) => {
 router.post('/orders', async (req, res) => {
   try {
     const { customer_name, customer_phone, address, latitude, longitude, description } = req.body;
-    
+
     // Validate required fields
     if (!customer_name || !customer_phone || !address) {
       return res.status(400).json({
@@ -87,7 +87,7 @@ router.post('/orders', async (req, res) => {
         error: 'Missing required fields: customer_name, customer_phone, address'
       });
     }
-    
+
     const orderData = {
       customer_name,
       customer_phone,
@@ -97,9 +97,9 @@ router.post('/orders', async (req, res) => {
       description: description || '',
       status: 'pending'
     };
-    
+
     const orderId = await databaseService.createOrder(orderData);
-    
+
     res.status(201).json({
       success: true,
       data: { id: orderId },
@@ -120,16 +120,16 @@ router.post('/orders/:id/assign', async (req, res) => {
   try {
     const { id } = req.params;
     const { maxDistance = 50 } = req.body;
-    
+
     const bestMaster = await databaseService.findAndAssignBestMaster(id, maxDistance);
-    
+
     if (!bestMaster) {
       return res.status(404).json({
         success: false,
         error: 'No suitable master found within the specified distance'
       });
     }
-    
+
     res.json({
       success: true,
       data: bestMaster,
@@ -149,24 +149,24 @@ router.post('/orders/:id/assign', async (req, res) => {
 router.post('/orders/:id/adl', upload.single('file'), async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     if (!req.file) {
       return res.status(400).json({
         success: false,
         error: 'No file uploaded'
       });
     }
-    
+
     // Validate file
     validateFile(req.file);
-    
+
     // Extract GPS metadata
     const fileBuffer = fs.readFileSync(req.file.path);
     const gpsData = await extractGPSMetadata(fileBuffer, req.file.mimetype);
-    
+
     // Determine file type
     const fileType = req.file.mimetype.startsWith('image/') ? 'photo' : 'video';
-    
+
     // Save ADL attachment to database
     const attachmentData = {
       order_id: id,
@@ -176,9 +176,9 @@ router.post('/orders/:id/adl', upload.single('file'), async (req, res) => {
       longitude: gpsData.longitude,
       timestamp: gpsData.timestamp
     };
-    
+
     const attachmentId = await databaseService.addADLAttachment(attachmentData);
-    
+
     res.json({
       success: true,
       data: {
@@ -190,12 +190,12 @@ router.post('/orders/:id/adl', upload.single('file'), async (req, res) => {
     });
   } catch (error) {
     console.error('Error uploading ADL:', error);
-    
+
     // Clean up uploaded file on error
     if (req.file && fs.existsSync(req.file.path)) {
       fs.unlinkSync(req.file.path);
     }
-    
+
     res.status(500).json({
       success: false,
       error: 'Failed to upload ADL',
@@ -208,9 +208,9 @@ router.post('/orders/:id/adl', upload.single('file'), async (req, res) => {
 router.post('/orders/:id/complete', async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     await databaseService.completeOrder(id);
-    
+
     res.json({
       success: true,
       message: 'Order completed successfully'

@@ -10,15 +10,15 @@ const pool = new Pool({
   port: parseInt(process.env.DB_PORT || '5432'),
   database: process.env.DB_NAME || 'nexa_order_flow',
   user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'password',
+  password: process.env.DB_PASSWORD || 'password'
 });
 
 async function migrate() {
   const client = await pool.connect();
-  
+
   try {
     console.log('🔄 Running database migrations...');
-    
+
     // Create masters table
     await client.query(`
       CREATE TABLE IF NOT EXISTS masters (

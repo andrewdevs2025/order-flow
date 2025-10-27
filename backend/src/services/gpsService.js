@@ -29,35 +29,35 @@ export async function extractGPSMetadata(fileBuffer, mimeType) {
     }
 
     const tags = ExifReader.load(fileBuffer);
-    
+
     // Debug: Log all available tags
     console.log('Available EXIF tags:', Object.keys(tags));
     console.log('GPS-related tags:', Object.keys(tags).filter(key => key.toLowerCase().includes('gps')));
-    
+
     // Try different possible GPS tag names
     const gpsLatitude = tags['GPS Latitude'] || tags['GPSLatitude'] || tags['gps.latitude'];
     const gpsLongitude = tags['GPS Longitude'] || tags['GPSLongitude'] || tags['gps.longitude'];
     const gpsLatitudeRef = tags['GPS LatitudeRef'] || tags['GPSLatitudeRef'] || tags['gps.latitudeRef'];
     const gpsLongitudeRef = tags['GPS LongitudeRef'] || tags['GPSLongitudeRef'] || tags['gps.longitudeRef'];
-    
+
     console.log('GPS Latitude:', gpsLatitude);
     console.log('GPS Longitude:', gpsLongitude);
     console.log('GPS LatitudeRef:', gpsLatitudeRef);
     console.log('GPS LongitudeRef:', gpsLongitudeRef);
-    
+
     if (!gpsLatitude || !gpsLongitude) {
       // Try to find any GPS-related data
-      const gpsTags = Object.keys(tags).filter(key => 
-        key.toLowerCase().includes('gps') || 
-        key.toLowerCase().includes('latitude') || 
+      const gpsTags = Object.keys(tags).filter(key =>
+        key.toLowerCase().includes('gps') ||
+        key.toLowerCase().includes('latitude') ||
         key.toLowerCase().includes('longitude')
       );
-      
+
       console.log('All GPS-related tags found:', gpsTags);
       gpsTags.forEach(tag => {
         console.log(`${tag}:`, tags[tag]);
       });
-      
+
       // TEMPORARY: Return mock data instead of throwing error
       console.log('No GPS found, using mock data for testing');
       return {
@@ -74,7 +74,7 @@ export async function extractGPSMetadata(fileBuffer, mimeType) {
     // Extract timestamp - try multiple possible fields
     let timestamp = null;
     const timestampFields = ['DateTime', 'DateTimeOriginal', 'DateTimeDigitized', 'CreateDate', 'ModifyDate'];
-    
+
     for (const field of timestampFields) {
       if (tags[field]) {
         timestamp = new Date(tags[field].description);
@@ -93,7 +93,7 @@ export async function extractGPSMetadata(fileBuffer, mimeType) {
     const now = new Date();
     const hoursDiff = (now - timestamp) / (1000 * 60 * 60);
     console.log(`Timestamp age: ${hoursDiff.toFixed(2)} hours`);
-    
+
     // Temporarily disable timestamp validation for testing
     // if (hoursDiff > 24) {
     //   throw new Error('File timestamp is too old (must be within 24 hours)');
@@ -107,7 +107,7 @@ export async function extractGPSMetadata(fileBuffer, mimeType) {
 
   } catch (error) {
     console.error('GPS extraction error:', error.message);
-    
+
     // TEMPORARY: Return mock data instead of throwing error
     console.log('GPS extraction failed, using mock data for testing');
     return {
@@ -126,10 +126,10 @@ export async function extractGPSMetadata(fileBuffer, mimeType) {
  */
 export function convertDMSToDD(dmsString, ref) {
   console.log('Converting DMS:', dmsString, 'Ref:', ref);
-  
+
   // Handle different DMS formats
   let parts;
-  
+
   // Try different regex patterns
   const patterns = [
     /(\d+)°\s*(\d+)'\s*([\d.]+)"/,  // Standard: 40° 42' 46.08"
@@ -137,12 +137,12 @@ export function convertDMSToDD(dmsString, ref) {
     /(\d+)\s*(\d+)\s*([\d.]+)/,       // No symbols: 40 42 46.08
     /(\d+):(\d+):([\d.]+)/            // Colon format: 40:42:46.08
   ];
-  
+
   for (const pattern of patterns) {
     parts = dmsString.match(pattern);
     if (parts) break;
   }
-  
+
   if (!parts) {
     console.log('Could not parse DMS format:', dmsString);
     throw new Error(`Invalid DMS format: ${dmsString}`);
@@ -171,7 +171,7 @@ export function convertDMSToDD(dmsString, ref) {
 export function validateFile(file) {
   const allowedTypes = [
     'image/jpeg',
-    'image/jpg', 
+    'image/jpg',
     'image/png',
     'video/mp4',
     'video/quicktime'

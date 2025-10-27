@@ -7,9 +7,9 @@ export const router = express.Router();
 router.get('/health', async (req, res) => {
   try {
     const dbHealthy = await databaseService.healthCheck();
-    
-    res.json({ 
-      status: 'OK', 
+
+    res.json({
+      status: 'OK',
       timestamp: new Date().toISOString(),
       service: 'Nexa Order Flow API',
       database: dbHealthy ? 'connected' : 'disconnected',
