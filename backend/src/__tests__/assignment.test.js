@@ -34,13 +34,16 @@ describe('Master Assignment Logic', () => {
       expect(result.distance).toBeLessThanOrEqual(5);
     });
 
-    it('should return null when no masters within max distance', () => {
+    it('should return closest master even with small max distance', () => {
       const orderLat = 40.7128;
       const orderLon = -74.0060;
 
-      const result = findBestMaster(mockMasters, orderLat, orderLon, 0.1); // Impossible distance
+      const result = findBestMaster(mockMasters, orderLat, orderLon, 0.1); // Very small distance
 
-      expect(result).toBeNull();
+      // Master at same location should be found even with small distance
+      expect(result).not.toBeNull();
+      expect(result.id).toBe('1');
+      expect(result.distance).toBe(0);
     });
 
     it('should calculate correct distance to order location', () => {
