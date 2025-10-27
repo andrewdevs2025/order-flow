@@ -1,0 +1,525 @@
+openapi: 3.0.0
+info:
+  title: Nexa Order Flow API
+  description: Complete order management system with smart assignment and ADL validation
+  version: 1.0.0
+  contact:
+    name: Nexa Team
+    email: support@nexa.com
+
+servers:
+  - url: http://localhost:3001/api
+    description: Development server
+  - url: https://api.nexa.com
+    description: Production server
+
+tags:
+  - name: health
+    description: System health checks
+  - name: orders
+    description: Order management endpoints
+  - name: masters
+    description: Master management endpoints
+
+paths:
+  /health:
+    get:
+      tags:
+        - health
+      summary: Health check endpoint
+      description: Returns the health status of the API and database
+      operationId: getHealth
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: OK
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: "2024-01-01T12:00:00Z"
+                  service:
+                    type: string
+                    example: Nexa Order Flow API
+                  database:
+                    type: string
+                    enum: [connected, disconnected]
+                    example: connected
+                  version:
+                    type: string
+                    example: 1.0.0
+        '503':
+          description: Service is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/orders:
+    get:
+      tags:
+        - orders
+      summary: Get all orders
+      description: Retrieve a list of all orders
+      operationId: getAllOrders
+      responses:
+        '200':
+          description: List of orders
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Order'
+                  count:
+                    type: integer
+                    example: 10
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - orders
+      summary: Create a new order
+      description: Create a new order with customer details and location
+      operationId: createOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - customer_name
+                - customer_phone
+                - address
+              properties:
+                customer_name:
+                  type: string
+                  example: John Doe
+                customer_phone:
+                  type: string
+                  example: "+1234567890"
+                address:
+                  type: string
+                  example: "123 Main St, New York, NY 10001"
+                latitude:
+                  type: number
+                  format: float
+                  example: 40.7128
+                longitude:
+                  type: number
+                  format: float
+                  example: -74.0060
+                description:
+                  type: string
+                  example: Fix the kitchen sink
+      responses:
+        '201':
+          description: Order created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                        example: "550e8400-e29b-41d4-a716-446655440000"
+                  message:
+                    type: string
+                    example: Order created successfully
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/orders/{id}:
+    get:
+      tags:
+        - orders
+      summary: Get order by ID
+      description: Retrieve a specific order by its ID
+      operationId: getOrderById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        '200':
+          description: Order details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Order'
+        '404':
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - orders
+      summary: Upload ADL file
+      description: Upload photo or video with GPS metadata to an order
+      operationId: uploadADL
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: File uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      fileType:
+                        type: string
+                        enum: [photo, video]
+                      gpsData:
+                        type: object
+                        properties:
+                          latitude:
+                            type: number
+                          longitude:
+                            type: number
+                          timestamp:
+                            type: string
+                            format: date-time
+                  message:
+                    type: string
+                    example: ADL uploaded successfully
+        '400':
+          description: Invalid file
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/orders/{id}/assign:
+    post:
+      tags:
+        - orders
+      summary: Assign master to order
+      description: Automatically assign the best available master to an order
+      operationId: assignMaster
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                maxDistance:
+                  type: number
+                  format: float
+                  default: 50
+                  example: 50
+                  description: Maximum distance in kilometers to find a master
+      responses:
+        '200':
+          description: Master assigned successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Master'
+                  message:
+                    type: string
+                    example: Master assigned successfully
+        '404':
+          description: No suitable master found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/orders/{id}/complete:
+    post:
+      tags:
+        - orders
+      summary: Complete an order
+      description: Mark an order as completed (requires ADL attachments)
+      operationId: completeOrder
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        '200':
+          description: Order completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Order completed successfully
+        '400':
+          description: Order cannot be completed without ADL attachments
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/masters:
+    get:
+      tags:
+        - masters
+      summary: Get all masters
+      description: Retrieve a list of all masters
+      operationId: getAllMasters
+      responses:
+        '200':
+          description: List of masters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Master'
+                  count:
+                    type: integer
+                    example: 5
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    Order:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        customer_name:
+          type: string
+          example: John Doe
+        customer_phone:
+          type: string
+          example: "+1234567890"
+        address:
+          type: string
+          example: "123 Main St, New York, NY 10001"
+        latitude:
+          type: number
+          format: float
+          example: 40.7128
+        longitude:
+          type: number
+          format: float
+          example: -74.0060
+        description:
+          type: string
+          example: Fix the kitchen sink
+        status:
+          type: string
+          enum: [pending, assigned, in_progress, completed]
+          example: pending
+        master_id:
+          type: string
+          format: uuid
+          nullable: true
+          example: "660e8400-e29b-41d4-a716-446655440000"
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-01-01T12:00:00Z"
+        assigned_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2024-01-01T12:30:00Z"
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2024-01-01T14:00:00Z"
+        adl_files:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              file_name:
+                type: string
+              file_type:
+                type: string
+                enum: [photo, video]
+              uploaded_at:
+                type: string
+                format: date-time
+
+    Master:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "660e8400-e29b-41d4-a716-446655440000"
+        name:
+          type: string
+          example: John Smith
+        phone:
+          type: string
+          example: "+1234567890"
+        latitude:
+          type: number
+          format: float
+          example: 40.7128
+        longitude:
+          type: number
+          format: float
+          example: -74.0060
+        rating:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 5
+          example: 4.8
+        active_orders:
+          type: integer
+          minimum: 0
+          example: 2
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-01-01T12:00:00Z"
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: Invalid request
+        message:
+          type: string
+          example: Detailed error message
+
